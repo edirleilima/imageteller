@@ -1,0 +1,20 @@
+  .chapter-content img {
+    max-width: 50%;
+    height: auto;
+  }
+  
+  .chapter-full img {
+    width: 100%;
+    height: auto;
+  }
+  
+  .chapter-content {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+  
+  .chapter-text {
+    flex: 1;
+  }
+  
