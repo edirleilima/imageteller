@@ -397,13 +397,13 @@ def save_story_to_db(parsed_story, user_id, genre, image_desc):
     for i in range(0, len(image_desc)):
         image_desc_str = image_desc_str + str(i) + ". " + image_desc[i] + "\n" 
     try:
-        cursor.execute("INSERT INTO Story (title, genre, image_desc, user_id, deleted) VALUES (%s, %s, %s, %s, 2)", 
+        cursor.execute("INSERT INTO story (title, genre, image_desc, user_id, deleted) VALUES (%s, %s, %s, %s, 2)", 
                        (parsed_story['title'], genre, image_desc_str, user_id))
         story_id = cursor.lastrowid
         parsed_story['id'] = story_id
         for chapter in parsed_story['chapters']:
             cursor.execute(
-                "INSERT INTO Chapter (story_id, title, text, alignment) VALUES (%s, %s, %s, %s)",
+                "INSERT INTO chapter (story_id, title, text, alignment) VALUES (%s, %s, %s, %s)",
                 (story_id, chapter['title'], chapter['text'], chapter['alignment'])
             )
             chapter_id = cursor.lastrowid
@@ -422,10 +422,10 @@ def update_story_to_db(parsed_story, story_id, chapter_id):
     conn = mysql.connector.connect(**db_config)
     cursor = conn.cursor()
     try:
-        cursor.execute("UPDATE Chapter SET deleted = 1 WHERE story_id = %s AND id >= %s", (story_id, chapter_id))
+        cursor.execute("UPDATE chapter SET deleted = 1 WHERE story_id = %s AND id >= %s", (story_id, chapter_id))
         parsed_story['id'] = story_id
         for chapter in parsed_story['chapters']:
-            cursor.execute("SELECT * FROM Chapter WHERE story_id = %s AND title = %s AND deleted = 0", (story_id, chapter['title']))
+            cursor.execute("SELECT * FROM chapter WHERE story_id = %s AND title = %s AND deleted = 0", (story_id, chapter['title']))
             old_chapter = cursor.fetchone()  
             if old_chapter:
                 chapter['id'] = old_chapter[0]
@@ -435,7 +435,7 @@ def update_story_to_db(parsed_story, story_id, chapter_id):
                 
             else:
                 cursor.execute(
-                    "INSERT INTO Chapter (story_id, title, text, alignment) VALUES (%s, %s, %s, %s)",
+                    "INSERT INTO chapter (story_id, title, text, alignment) VALUES (%s, %s, %s, %s)",
                     (story_id, chapter['title'], chapter['text'], chapter['alignment'])
                 )
                 chapter_id = cursor.lastrowid
@@ -773,7 +773,7 @@ async def illustrate_chapter(chapter: Chapter):
     conn = mysql.connector.connect(**db_config)
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT * FROM Story WHERE id = %s AND user_id = %s AND deleted = 2", (chapter.story_id, chapter.user))
+        cursor.execute("SELECT * FROM story WHERE id = %s AND user_id = %s AND deleted = 2", (chapter.story_id, chapter.user))
         story = cursor.fetchone()  
         if story:
             character_library = story[7] if story[7] else ""
@@ -784,7 +784,7 @@ async def illustrate_chapter(chapter: Chapter):
             actor_library = update_actor_library(actor_library_str, prompt)
             improved_prompt = replace_actors_in_prompt(actor_library, prompt)
             actor_library_str = convert_actor_library_to_string(actor_library)
-            cursor.execute("UPDATE Story SET characters = %s, actors = %s WHERE id = %s AND user_id = %s", (character_library, actor_library_str, chapter.story_id, chapter.user))
+            cursor.execute("UPDATE story SET characters = %s, actors = %s WHERE id = %s AND user_id = %s", (character_library, actor_library_str, chapter.story_id, chapter.user))
             conn.commit()
             style = "Photography, realistic detailed skin, 4k, highly detailed, diffused soft lighting, shallow depth of field, sharp focus, hyperrealism, cinematic lighting."
             imgfilename = str(chapter.story_id) + "_" + str(chapter.chapter_id) + ".png"
@@ -826,9 +826,9 @@ async def get_stories(user: str = Query(...)):
     cursor = conn.cursor()
     try:
         if (user == ADMIN_USER):
-            cursor.execute("SELECT * FROM Story")
+            cursor.execute("SELECT * FROM story")
         else:
-            cursor.execute("SELECT * FROM Story WHERE (user_id = %s OR user_id = '') AND deleted = 0", (user,))
+            cursor.execute("SELECT * FROM story WHERE (user_id = %s OR user_id = '') AND deleted = 0", (user,))
         stories = cursor.fetchall()  
         all_stories = []
         for story in stories:
@@ -853,13 +853,13 @@ async def get_story(id: str = Query(...), user: str = Query(...)):
     cursor = conn.cursor()
     try:
         if (user == ADMIN_USER):
-            cursor.execute("SELECT * FROM Story WHERE id = %s", (id, ))
+            cursor.execute("SELECT * FROM story WHERE id = %s", (id, ))
         else:
-            cursor.execute("SELECT * FROM Story WHERE id = %s AND (user_id = %s OR user_id = '') AND deleted = 0", (id, user))
+            cursor.execute("SELECT * FROM story WHERE id = %s AND (user_id = %s OR user_id = '') AND deleted = 0", (id, user))
         story = cursor.fetchone()  
         if story:
             story_data = {'id': story[0], 'title': story[1]}
-            cursor.execute("SELECT * FROM Chapter WHERE story_id = %s AND deleted = 0", (id,))
+            cursor.execute("SELECT * FROM chapter WHERE story_id = %s AND deleted = 0", (id,))
             chapters = cursor.fetchall()
             story_data['chapters'] = [{'id':chapter[0], 'title': chapter[2], 'text': chapter[3], 'alignment': chapter[4]} for chapter in chapters ]
             cursor.close()
@@ -880,10 +880,10 @@ async def save_story(id: str = Query(...), user: str = Query(...)):
     conn = mysql.connector.connect(**db_config)
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT * FROM Story WHERE id = %s AND user_id = %s AND deleted = 2", (id, user))
+        cursor.execute("SELECT * FROM story WHERE id = %s AND user_id = %s AND deleted = 2", (id, user))
         story = cursor.fetchone()  
         if story:
-            cursor.execute("UPDATE Story SET deleted = 0 WHERE id = %s AND user_id = %s", (id, user))     
+            cursor.execute("UPDATE story SET deleted = 0 WHERE id = %s AND user_id = %s", (id, user))     
             conn.commit()
             cursor.close()
             conn.close()       
@@ -901,10 +901,10 @@ async def delete_story(id: str = Query(...), user: str = Query(...)):
     conn = mysql.connector.connect(**db_config)
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT * FROM Story WHERE id = %s AND user_id = %s AND deleted = 0", (id, user))
+        cursor.execute("SELECT * FROM story WHERE id = %s AND user_id = %s AND deleted = 0", (id, user))
         story = cursor.fetchone()  
         if story:
-            cursor.execute("UPDATE Story SET deleted = 1 WHERE id = %s AND user_id = %s", (id, user))     
+            cursor.execute("UPDATE story SET deleted = 1 WHERE id = %s AND user_id = %s", (id, user))     
             conn.commit()
             cursor.close()
             conn.close()       
@@ -922,11 +922,11 @@ async def regenerate_chapter(chapter: Chapter):
     conn = mysql.connector.connect(**db_config)
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT * FROM Story WHERE id = %s AND user_id = %s AND deleted = 2", (chapter.story_id, chapter.user))
+        cursor.execute("SELECT * FROM story WHERE id = %s AND user_id = %s AND deleted = 2", (chapter.story_id, chapter.user))
         story = cursor.fetchone()  
         if story:
             story_data = {'id': story[0], 'title': story[1], 'genre': story[3], 'image_desc': story[4]}
-            cursor.execute("SELECT * FROM Chapter WHERE story_id = %s AND deleted = 0", (chapter.story_id,))
+            cursor.execute("SELECT * FROM chapter WHERE story_id = %s AND deleted = 0", (chapter.story_id,))
             chapters = cursor.fetchall()
             story_data['chapters'] = [{'id':chapter[0], 'title': chapter[2], 'text': chapter[3], 'alignment': chapter[4]} for chapter in chapters ]
             new_story_markdown = regenerate_chapter_for_story(story_data, chapter.chapter_id)
