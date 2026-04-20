@@ -37,10 +37,10 @@ CHAPTER_FOLDER = f"{DATA_PATH}/chapters/"
 
 #LLM Settings
 LLM_PROVIDER = "ollama" # or "openai"
-LLM_MODEL = "qwen3:32b"
+LLM_MODEL = "qwen3.6:35b-a3b" #qwen3:32b
 LLM_TEMPERATURE = 0.9
 LLM_CHARACTER_LIB_PROVIDER = "ollama"
-LLM_CHARACTER_LIB_MODEL =  "qwen3:32b"
+LLM_CHARACTER_LIB_MODEL =  "qwen3.6:35b-a3b" #qwen3:32b
 LLM_CHARACTER_LIB_TEMPERATURE = 0.9
 LLM_IMAGE_PROVIDER = "ollama"
 LLM_IMAGE_MODEL = "llava:34b"
@@ -204,7 +204,7 @@ def send_ollama_request(messages, model_name, temperature):
     can_continue = True
     result = ""
     try:
-        response = client_ollama.chat(model=model_name, messages=messages, options = {'temperature': temperature})
+        response = client_ollama.chat(model=model_name, messages=messages, think=False, options = {'temperature': temperature})
         result = response["message"]["content"].strip()
         can_continue = True
     except ResponseError as e:
@@ -357,9 +357,9 @@ def generate_story_prompt(image_descriptions, genre, desc_is_array):
 def generate_story(image_descriptions, genre):
     prompt = generate_story_prompt(image_descriptions, genre, True) 
     if genre == "Data Storytelling":
-        messages = [{"role": "system", "content": "You are an expert data storyteller. /no_think"}]  
+        messages = [{"role": "system", "content": "You are an expert data storyteller."}]  
     else:
-        messages = [{"role": "system", "content": "You are a creative story writer. /no_think"}]  
+        messages = [{"role": "system", "content": "You are a creative story writer."}]  
     messages.append({"role": "user", "content": prompt})
 
     return send_llm_request(messages, LLM_PROVIDER, LLM_MODEL, LLM_TEMPERATURE)
@@ -367,9 +367,9 @@ def generate_story(image_descriptions, genre):
 def regenerate_chapter_for_story(story, chapter_id):
     prompt = generate_story_prompt(story['image_desc'], story['genre'], False)    
     if story['genre'] == "Data Storytelling":
-        messages = [{"role": "system", "content": "You are an expert data storyteller. /no_think"}]  
+        messages = [{"role": "system", "content": "You are an expert data storyteller."}]  
     else:
-        messages = [{"role": "system", "content": "You are a creative story writer. /no_think"}] 
+        messages = [{"role": "system", "content": "You are a creative story writer."}] 
     messages.append({"role": "user", "content": prompt})    
 
     story_text = "# " + story['title'] + "\n"
@@ -484,7 +484,7 @@ def parse_story(markdown_story):
 
 def update_character_library(text, character_library):
     prompt = "Story Text: " + text + " \n\nCharacter Library: " + character_library + "\n\nRead the provided story text and identify the relevant characters mentioned, focusing on those who are named and visually described (e.g., physical appearance, clothing, expressions). For each character, extract and summarize only their visually observable attributes and age group (e.g., infant, child, teenager, adult, senior, elder, ancient). Do not include personality traits, ideological descriptions, or narrative roles. If the text does not provide visual and clothing details for a character, generate the information according to the narrative context. Ensure that the description of all characters includes their visual attributes (all characters must have a hair color, hairstyle, and eye color defined) and clothes details (all characters must have a clothing type and color defined). Use the following format: NAME: DESCRIPTION, where NAME identifies the character's name (followed by a colon), and DESCRIPTION is a concise paragraph summarizing the character's key visually observable details, such as hair color, eye color, age group, clothing type, and clothing type. This should be concise yet comprehensive enough to maintain consistency across scenes. If a character is already in the Character Library but new details are provided, update the existing entry instead of creating a new one. Ensure that each character pair NAME: DESCRIPTION is presented within square brackets: [NAME: DESCRIPTION]. \n\nEnsure that the Character Library does not include characters whose names are defined by generic role descriptors such as 'villager', 'father', 'dragon' or other unnamed individuals.\n\nVery important: you must write only the Character Library without adding commentaries or notes to your response. Write your response in english only."
-    messages = [{"role": "system", "content": "/no_think"}]  
+    messages = [{"role": "system", "content": ""}]  
     messages.append({"role": "user", "content": prompt})
     return send_llm_request(messages, LLM_CHARACTER_LIB_PROVIDER, LLM_CHARACTER_LIB_MODEL, LLM_CHARACTER_LIB_TEMPERATURE)
 
@@ -559,7 +559,7 @@ def replace_actors_in_prompt(actor_library, image_prompt):
 
 def generate_illustration_description(chapter, character_library):
     prompt = "Story Chapter: " + chapter + "\n\nCharacter Library: " + character_library + "\n\nIdentify a single significant event in the provided story chapter and write a concise description (maximum of 80 words) to be used as input for a Stable Diffusion model to generate an illustration. Focus on the characters' actions, interactions, and the environment. Only include in the description characters who are explicitly mentioned in the story chapter and refer to them by their names in the generated description. \n\nWhen describing the characters, include all details related to their visual attributes (such as age group, hair color, hairstyle, eye color, clothing type, and clothing colors). If any visual or clothing details for a character are missing from both the chapter and the Character Library, create appropriate attributes that are consistent with the story's setting, genre, and tone. Ensure these details are realistic and coherent with the story context. \n\nVery important: you must write only the description without adding formatting elements, commentaries, or notes to your response. Refer to all characters by name. Write your response in english only."
-    messages = [{"role": "system", "content": "You are a creative story writer. /no_think"}]  
+    messages = [{"role": "system", "content": "You are a creative story writer."}]  
     messages.append({"role": "user", "content": prompt})
     return send_llm_request(messages, LLM_CHARACTER_LIB_PROVIDER, LLM_CHARACTER_LIB_MODEL, LLM_CHARACTER_LIB_TEMPERATURE)
 
@@ -603,19 +603,19 @@ async def comfyui_get_images_async(ws, prompt, uri, headers):
         except asyncio.TimeoutError:
             print("WebSocket recv timed out.")
             await asyncio.sleep(15)
-            ws = await websockets.connect(uri, extra_headers=headers)
+            ws = await websockets.connect(uri, additional_headers=headers)
             prompt_id = (await comfyui_queue_prompt_async(prompt))['prompt_id']
             continue  
         except websockets.exceptions.ConnectionClosedError as e:
             print(f"WebSocket connection closed unexpectedly: {e}")
             await asyncio.sleep(15)
-            ws = await websockets.connect(uri, extra_headers=headers)
+            ws = await websockets.connect(uri, additional_headers=headers)
             prompt_id = (await comfyui_queue_prompt_async(prompt))['prompt_id']
             continue
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
             await asyncio.sleep(15)
-            ws = await websockets.connect(uri, extra_headers=headers)
+            ws = await websockets.connect(uri, additional_headers=headers)
             prompt_id = (await comfyui_queue_prompt_async(prompt))['prompt_id']
             continue
 
@@ -650,7 +650,7 @@ async def comfyui_generate_image_flux_async(workflow, prompt, negative, seed, fi
 
     uri = f"wss://{comfyui_server_address}/ws?clientId={comfyui_client_id}"
     headers = {"Authorization": comfyui_auth_header}
-    async with websockets.connect(uri, extra_headers=headers) as ws:
+    async with websockets.connect(uri, additional_headers=headers) as ws:
         images = await comfyui_get_images_async(ws, promptdata, uri, headers)
 
     if images:
