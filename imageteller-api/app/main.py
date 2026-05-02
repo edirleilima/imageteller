@@ -4,7 +4,7 @@ from fastapi.security.api_key import APIKeyHeader, APIKeyQuery
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 from fastapi.responses import FileResponse
 import mimetypes
-from openai import OpenAI
+from openai import OpenAI, OpenAIError
 from typing import List
 import os
 import openai
@@ -31,22 +31,23 @@ from dotenv import load_dotenv
 load_dotenv()
 
 #data folders
-DATA_PATH = "/imageteller"
+DATA_PATH = os.getenv("DATA_PATH")
 IMAGE_FOLDER = f"{DATA_PATH}/images"
 CHAPTER_FOLDER = f"{DATA_PATH}/chapters/"
 
 #LLM Settings
-LLM_PROVIDER = "ollama" # or "openai"
-LLM_MODEL = "qwen3.6:35b-a3b" #qwen3:32b
-LLM_TEMPERATURE = 0.9
-LLM_CHARACTER_LIB_PROVIDER = "ollama"
-LLM_CHARACTER_LIB_MODEL =  "qwen3.6:35b-a3b" #qwen3:32b
-LLM_CHARACTER_LIB_TEMPERATURE = 0.9
-LLM_IMAGE_PROVIDER = "ollama"
-LLM_IMAGE_MODEL = "llava:34b"
-LLM_IMAGE_TEMPERATURE = 0.9
+LLM_PROVIDER = os.getenv("LLM_PROVIDER")
+LLM_MODEL = os.getenv("LLM_MODEL")
+LLM_TEMPERATURE = os.getenv("LLM_TEMPERATURE")
+LLM_CHARACTER_LIB_PROVIDER = os.getenv("LLM_CHARACTER_LIB_PROVIDER")
+LLM_CHARACTER_LIB_MODEL = os.getenv("LLM_CHARACTER_LIB_MODEL")
+LLM_CHARACTER_LIB_TEMPERATURE = os.getenv("LLM_CHARACTER_LIB_TEMPERATURE")
+LLM_IMAGE_PROVIDER = os.getenv("LLM_IMAGE_PROVIDER")
+LLM_IMAGE_MODEL = os.getenv("LLM_IMAGE_MODEL")
+LLM_IMAGE_TEMPERATURE = os.getenv("LLM_IMAGE_TEMPERATURE")
 OLLAMA_SERVER = os.getenv("OLLAMA_SERVER")
 OLLAMA_SERVER_IMAGE = os.getenv("OLLAMA_SERVER_IMAGE")
+VLLM_SERVER = os.getenv("VLLM_SERVER")
 OPENAI_KEY = os.getenv("OPENAI_KEY")
 
 NLP_API_SERVER = os.getenv("NLP_API_SERVER")
@@ -91,6 +92,7 @@ async def init_life_span(app: FastAPI):
 client_openai = OpenAI(api_key = OPENAI_KEY)
 client_ollama = Client(host=OLLAMA_SERVER)
 client_ollama_image = Client(host=OLLAMA_SERVER_IMAGE)
+client_vllm = OpenAI(base_url=VLLM_SERVER, api_key="NONE")
 
 app = FastAPI(root_path="/imageteller-api", docs_url=None, redoc_url=None, openapi_url=None, lifespan=init_life_span)
 
@@ -224,6 +226,26 @@ def send_ollama_image_request(messages, model_name, temperature):
         can_continue = True
     return can_continue, result
 
+def send_vllm_request(messages, model_name, temperature):
+    can_continue = True
+    result = ""
+    try:
+        response = client_vllm.chat.completions.create(
+            model=model_name,
+            messages=messages,
+            temperature=temperature,
+            extra_body={
+                "chat_template_kwargs": {"enable_thinking": False},
+                "reasoning_effort": "low",
+            },
+        )
+        result = (response.choices[0].message.content or "").strip()
+        can_continue = True
+    except OpenAIError as e:
+        print(f"vLLM Error: {e}")
+        can_continue = True
+    return can_continue, result
+
 def send_llm_request(messages, provider, model_name, temperature):
     result = ""
     can_continue = False
@@ -233,6 +255,8 @@ def send_llm_request(messages, provider, model_name, temperature):
             can_continue, result = send_openai_request(messages, model_name, temperature)
         elif provider == "ollama":
             can_continue, result = send_ollama_request(messages, model_name, temperature)
+        elif provider == "vllm":
+            can_continue, result = send_vllm_request(messages, model_name, temperature)
         numtries = numtries + 1
         if (numtries > 15):
             break
