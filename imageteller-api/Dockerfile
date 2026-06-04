@@ -23,30 +23,17 @@ FROM python:3.12-slim-bookworm AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PATH="/opt/venv/bin:$PATH" \
-    HOME=/tmp
+    PATH="/opt/venv/bin:$PATH"
 
 # curl is only needed for the healthcheck below.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Run as a non-root user whose UID/GID matches the OWNER OF THE MOUNTED DATA
-# DIRECTORIES on the host, so the container can write images/ and chapters/.
-# Defaults to 33:33 (www-data on Debian/Ubuntu hosts). If your host folders are
-# owned by a different account, override at build time:
-#   docker build --build-arg APP_UID=<uid> --build-arg APP_GID=<gid> -t imageteller-api ./imageteller-api
-ARG APP_UID=33
-ARG APP_GID=33
-
 COPY --from=builder /opt/venv /opt/venv
 
 WORKDIR /code
-# Application code is owned by root and world-readable; the runtime user only
-# needs to read/execute it, so no chown is required.
 COPY ./app /code/app
-
-USER ${APP_UID}:${APP_GID}
 
 EXPOSE 8001
 
