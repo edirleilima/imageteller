@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
 import { Container, Table, CircularProgress, Typography, Box, IconButton, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Button, Snackbar } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import {Link } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { GetCookie } from './utils';
+import { getUserId } from './utils';
+import { getStories, deleteStory } from './api';
 import { useLocation } from 'react-router-dom';
 
 const LibraryPage = () => {
@@ -18,21 +18,15 @@ const LibraryPage = () => {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const admin = queryParams.get('admin');
-  
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
-  const userCookie = GetCookie("imageteller_user");
+  const userCookie = getUserId();
 
   useEffect(() => {
     const fetchStories = async () => {
       setLoading(true);
       try {
-        const response = await axios.post(`${baseUrl}/get-stories/`, null, {
-          params: {
-            user: admin || userCookie
-          }
-        });
-        setStories(response.data);
+        const data = await getStories(admin || userCookie);
+        setStories(data);
       } catch (err) {
         setError('Failed to fetch stories.');
       }
@@ -40,7 +34,7 @@ const LibraryPage = () => {
     };
 
     fetchStories();
-  }, [admin, userCookie, baseUrl]);
+  }, [admin, userCookie]);
 
   const handleClickOpenDialog = (storyId) => {
     setSelectedStoryId(storyId);
@@ -54,14 +48,9 @@ const LibraryPage = () => {
 
   const handleDeleteStory = async () => {
     try {
-      const response = await axios.post(`${baseUrl}/delete-story/`, null, {
-        params: {
-          id: selectedStoryId,
-          user: userCookie
-        }
-      });
+      const data = await deleteStory(selectedStoryId, userCookie);
 
-      if (response.data.status === 'success') {
+      if (data.status === 'success') {
         setStories(stories.filter(story => story.id !== selectedStoryId));
         setOpenSnackbar(true);
       } else {

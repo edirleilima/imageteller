@@ -10,9 +10,13 @@ import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './Story.css';
-import axios from 'axios';
-
-const placeholderImage = process.env.REACT_APP_PLACEHOLDER_IMAGE_URL;
+import {
+  illustrateChapter,
+  regenerateChapter,
+  chapterImageUrl,
+  checkImageExists,
+  placeholderImage,
+} from './api';
 
 const Story = ({ title, chapters, storyId, userId, updateChapterImage, updateChapters, loadingChapters, setLoadingChapters, editButtonClass, setEditButtonClass}) => {
   const [selectedChapter, setSelectedChapter] = useState(null);
@@ -20,23 +24,12 @@ const Story = ({ title, chapters, storyId, userId, updateChapterImage, updateCha
   const [regenerating, setRegenerating] = useState({});
   const open = Boolean(anchorEl);
 
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
-
   const handleReloadImage = async (chapter) => {
     handleEditClose();
     updateChapterImage(chapter.id, null); 
     try {
-      const response = await axios.post(`${baseUrl}/illustrate-chapter/`, {
-        story_id: storyId.toString(),
-        chapter_id: chapter.id.toString(),
-        text: chapter.text,
-        user: userId
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-      updateChapterImage(chapter.id, response.data.url + "?" + encodeURIComponent(new Date().toString()));
+      const data = await illustrateChapter(storyId, chapter.id, chapter.text, userId);
+      updateChapterImage(chapter.id, data.url + "?" + encodeURIComponent(new Date().toString()));
     } catch (error) {
       console.error(`Error regenerating image for chapter ${chapter.title}:`, error);
       updateChapterImage(chapter.id, placeholderImage); 
@@ -44,15 +37,6 @@ const Story = ({ title, chapters, storyId, userId, updateChapterImage, updateCha
   };
 
   const fetchChapterImages = async (chapters, storyid) => {
-
-    const checkImageExists = async (url) => {
-      try {
-        const response = await fetch(url, { method: 'HEAD' });
-        return response.status === 200;
-      } catch (error) {
-        return false;
-      }
-    };
 
     const updatedChapters = [...chapters];
 
@@ -63,23 +47,14 @@ const Story = ({ title, chapters, storyId, userId, updateChapterImage, updateCha
 
     for (let i = 0; i < updatedChapters.length; i++) {
       const chapter = updatedChapters[i];
-      const imageUrl = `${baseUrl}/chapters/${storyid}/${chapter.id}`;
+      const imageUrl = chapterImageUrl(storyid, chapter.id);
 
       const imageExists = await checkImageExists(imageUrl);
 
       if (!imageExists) {
         try {
-          const response = await axios.post(`${baseUrl}/illustrate-chapter/`, {
-            "story_id": storyid.toString(),
-            "chapter_id": chapter.id.toString(),
-            "text": chapter.text,
-            "user": userId
-          }, {
-            headers: {
-              'Content-Type': 'application/json',
-            }
-          });
-          updatedChapters[i].image = response.data.url;
+          const data = await illustrateChapter(storyid, chapter.id, chapter.text, userId);
+          updatedChapters[i].image = data.url;
         } catch (error) {
           console.error(`Error generating image for chapter ${chapter.title}:`, error);
         }
@@ -107,18 +82,8 @@ const Story = ({ title, chapters, storyId, userId, updateChapterImage, updateCha
       return newRegenerating;
     });
     try {
-      const response = await axios.post(`${baseUrl}/regenerate-chapter/`, {
-        story_id: storyId.toString(),
-        chapter_id: chapter.id.toString(),
-        text: "",
-        user: userId
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-      console.log(response.data);
-      const story = response.data.story;
+      const data = await regenerateChapter(storyId, chapter.id, userId);
+      const story = data.story;
       setRegenerating((prev) => {
         const newRegenerating = { ...prev };
         newRegenerating[chapter.id] = false;

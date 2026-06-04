@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Container, Typography, Card, CardMedia, IconButton, CardContent, Box, Button, CircularProgress, TextField, MenuItem, ListSubheader } from '@mui/material';
 import { Delete, Add } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { v4 as uuidv4 } from 'uuid';
-import axios from 'axios';
 import Story from './Story';
-import { GetCookie, SetCookie } from './utils';
+import { getOrCreateUserId } from './utils';
+import { generateStory, illustrateChapter, saveStory } from './api';
+import { usePrintMode } from './usePrintMode';
 import { Link, useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
@@ -45,45 +45,10 @@ function MainPage() {
   const [loadingChapters, setLoadingChapters] = useState(true);
   const [editButtonClass, setEditButtonClass] = useState('');
 
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const handleBeforePrint = () => {
-      document.querySelectorAll('.MuiContainer-root').forEach((element) => {
-        element.classList.add('print-container');
-        element.classList.remove('MuiContainer-root', 'MuiContainer-maxWidthLg', 'container', 'p-5');
-      });
-      document.getElementById('view-user-library').classList.add('d-none');
-      document.getElementById('create-new-story').classList.add('d-none');
-      document.getElementById('print-story').classList.add('d-none');
-      document.getElementById('view-user-library').classList.remove('d-flex');
-      document.getElementById('create-new-story').classList.remove('d-flex');
-      document.getElementById('print-story').classList.remove('d-flex');
-    };
-
-    const handleAfterPrint = () => {
-      document.querySelectorAll('.print-container').forEach((element) => {
-        element.classList.add('MuiContainer-root', 'MuiContainer-maxWidthLg', 'container', 'p-5');
-        element.classList.remove('print-container');
-      });
-      document.getElementById('view-user-library').classList.add('d-flex');
-      document.getElementById('create-new-story').classList.add('d-flex');
-      document.getElementById('print-story').classList.add('d-flex');
-      document.getElementById('view-user-library').classList.remove('d-none');
-      document.getElementById('create-new-story').classList.remove('d-none');
-      document.getElementById('print-story').classList.remove('d-none');
-    };
-
-    window.addEventListener('beforeprint', handleBeforePrint);
-    window.addEventListener('afterprint', handleAfterPrint);
-
-    return () => {
-      window.removeEventListener('beforeprint', handleBeforePrint);
-      window.removeEventListener('afterprint', handleAfterPrint);
-    };
-  }, []);
+  usePrintMode();
 
   const handleImageUpload = (event) => {
     const files = event.target.files;
@@ -129,11 +94,7 @@ function MainPage() {
     setChapters([]);
     setErrorMessage('');
 
-    let userid = GetCookie("imageteller_user");
-    if (userid === ''){
-      userid = uuidv4();
-      SetCookie("imageteller_user", userid, 360);
-    }
+    const userid = getOrCreateUserId();
     setUserId(userid);
 
     const formData = new FormData();
@@ -145,17 +106,8 @@ function MainPage() {
       formData.append('captions', captions[i]); 
     }
 
-    const url = new URL(`${baseUrl}/image-to-story/`);
-    url.searchParams.append('genre', selectedGenre);
-    url.searchParams.append('user', userid);
     try {
-      const response = await axios.post(url.toString(), formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      
-      const story = response.data;  
+      const story = await generateStory(formData, selectedGenre, userid);
       setStoryTitle(story.title);
       setChapters(story.chapters);
       setStoryId(story.id);
@@ -180,16 +132,8 @@ function MainPage() {
       const chapter = chapters[i];
       updateChapterImage(chapter.id, null);
       try {
-        const response = await axios.post(`${baseUrl}/illustrate-chapter/`, {
-          "story_id": storyid.toString(),
-          "chapter_id": chapter.id.toString(),
-          "text": chapter.text,
-          "user": userid
-        }, {
-          headers: {
-            'Content-Type': 'application/json',
-          }});
-          updateChapterImage(chapter.id, response.data.url + "?" + encodeURIComponent(new Date().toString()));                 
+        const data = await illustrateChapter(storyid, chapter.id, chapter.text, userid);
+        updateChapterImage(chapter.id, data.url + "?" + encodeURIComponent(new Date().toString()));                 
       } catch (error) {
         console.error(`Error fetching image for chapter ${chapter.title}:`, error);
       }
@@ -216,14 +160,9 @@ function MainPage() {
   const handleSaveStory = async () =>{
     setSaving(true);
     try {
-      const response = await axios.post(`${baseUrl}/save-story/`, null, {
-        params: {
-          id: storyId,
-          user: userId
-        }
-      });
+      const data = await saveStory(storyId, userId);
 
-      if (response.data.status === 'success') {
+      if (data.status === 'success') {
         
         navigate("/story/" + storyId);
       } else {
