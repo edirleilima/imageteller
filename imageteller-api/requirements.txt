@@ -1,16 +1,26 @@
+# Web framework
 fastapi
-fastapi-cors
-mysql-connector-python
-openai
-pydantic
-pydantic-core
-python-multipart
-requests
-requests-oauthlib
-urllib3
 uvicorn
-websocket-client
-websockets
+pydantic
+python-multipart
+
+# Configuration
+python-dotenv
+
+# Database
+mysql-connector-python
+
+# HTTP clients
+requests
 aiohttp
+urllib3
+
+# WebSockets (ComfyUI client)
+websockets
+
+# LLM providers
+openai
 ollama
+
+# Image processing
 pillow
