@@ -163,10 +163,50 @@ class URLSettings:
         )
 
 
+def _int_env(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None or raw == "":
+        return default
+    return int(raw)
+
+
 @dataclass(frozen=True)
 class UploadSettings:
     max_file_size: int = 25 * 1024 * 1024
     allowed_extensions: frozenset[str] = frozenset({".jpg", ".jpeg", ".png", ".gif"})
+    max_files: int = field(default_factory=lambda: _int_env("MAX_UPLOAD_FILES", 10))
+
+
+@dataclass(frozen=True)
+class RateLimitSettings:
+    """Abuse-control limits. All optional; sensible defaults if unset.
+
+    ``storage_uri`` defaults to in-process memory, which means limits are
+    enforced *per uvicorn worker*. With ``--workers 4`` the effective limit is
+    4x the configured value. Point this at a shared backend (e.g.
+    ``redis://host:6379``) for exact, cross-worker enforcement.
+    """
+    storage_uri: str = field(
+        default_factory=lambda: os.getenv("RATE_LIMIT_STORAGE_URI", "memory://")
+    )
+    generate: str = field(
+        default_factory=lambda: os.getenv("RATE_LIMIT_GENERATE", "10/hour")
+    )
+    illustrate: str = field(
+        default_factory=lambda: os.getenv("RATE_LIMIT_ILLUSTRATE", "60/hour")
+    )
+    regenerate: str = field(
+        default_factory=lambda: os.getenv("RATE_LIMIT_REGENERATE", "30/hour")
+    )
+    read: str = field(
+        default_factory=lambda: os.getenv("RATE_LIMIT_READ", "120/minute")
+    )
+    write: str = field(
+        default_factory=lambda: os.getenv("RATE_LIMIT_WRITE", "60/minute")
+    )
+    media: str = field(
+        default_factory=lambda: os.getenv("RATE_LIMIT_MEDIA", "300/minute")
+    )
 
 
 # Singletons — built once at import, immutable thereafter.
@@ -177,3 +217,4 @@ comfyui = ComfyUISettings.from_env()
 api = APISettings.from_env()
 urls = URLSettings.from_env()
 uploads = UploadSettings()
+ratelimits = RateLimitSettings()

@@ -4,15 +4,15 @@ from __future__ import annotations
 import asyncio
 from contextlib import asynccontextmanager
 
-import urllib3
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from app.config import api
 from app.media.comfyui import image_generation_worker
+from app.ratelimit import limiter
 from app.routers import docs, stories, images
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 @asynccontextmanager
@@ -33,12 +33,18 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Abuse-control rate limiting (see app/ratelimit.py).
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Identity travels in the X-User-Id header, not cookies, so credentialed CORS
+# is unnecessary. Origins are still restricted to the configured front-end.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[api.domain_url] if api.domain_url else [],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "HEAD", "OPTIONS"],
+    allow_headers=["Content-Type", "X-User-Id"],
 )
 
 app.include_router(docs.router)

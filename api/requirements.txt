@@ -4,6 +4,9 @@ uvicorn
 pydantic
 python-multipart
 
+# Rate limiting (abuse control)
+slowapi
+
 # Configuration
 python-dotenv
 

@@ -17,6 +17,7 @@ from app.characters import (
     replace_actors_in_prompt,
     convert_actor_library_to_string,
 )
+from app.logging_utils import log_error
 from app.media import generate_image_description, submit_image_job
 from app.schemas import Chapter
 from app.story import repository as repo
@@ -108,8 +109,8 @@ def save_generated_story(parsed_story: dict, user_id: str, genre: str, image_des
                 chapter["id"] = repo.insert_chapter(
                     cursor, story_id, chapter["title"], chapter["text"], chapter["alignment"]
                 )
-    except mysql.connector.Error:
-        pass
+    except mysql.connector.Error as err:
+        log_error(f"save_generated_story failed: {err}")
     return parsed_story
 
 
@@ -129,8 +130,8 @@ def update_story_after_regeneration(parsed_story: dict, story_id, chapter_id) ->
                     chapter["id"] = repo.insert_chapter(
                         cursor, story_id, chapter["title"], chapter["text"], chapter["alignment"]
                     )
-    except mysql.connector.Error:
-        pass
+    except mysql.connector.Error as err:
+        log_error(f"update_story_after_regeneration failed: {err}")
     return parsed_story
 
 
@@ -159,7 +160,8 @@ def list_stories(user: str) -> list[dict]:
                     {"id": story[0], "title": story[1], "date": story[5], "can_delete": candelete}
                 )
             return all_stories
-    except mysql.connector.Error:
+    except mysql.connector.Error as err:
+        log_error(f"list_stories failed: {err}")
         return []
 
 
@@ -180,7 +182,8 @@ def get_story_detail(story_id: str, user: str) -> dict:
                 return story_data
             else:
                 return {}
-    except mysql.connector.Error:
+    except mysql.connector.Error as err:
+        log_error(f"get_story_detail failed: {err}")
         return {}
 
 
@@ -191,7 +194,8 @@ def save_story(story_id: str, user: str) -> dict:
             if story:
                 repo.mark_story_saved(cursor, story_id, user)
                 return {"status": "success"}
-    except mysql.connector.Error:
+    except mysql.connector.Error as err:
+        log_error(f"save_story failed: {err}")
         return {"status": "failure"}
     return {"status": "failure"}
 
@@ -203,17 +207,18 @@ def delete_story(story_id: str, user: str) -> dict:
             if story:
                 repo.mark_story_deleted(cursor, story_id, user)
                 return {"status": "success"}
-    except mysql.connector.Error:
+    except mysql.connector.Error as err:
+        log_error(f"delete_story failed: {err}")
         return {"status": "failure"}
     return {"status": "failure"}
 
 
-async def illustrate_chapter(chapter: Chapter) -> dict:
+async def illustrate_chapter(chapter: Chapter, user: str) -> dict:
     chapter_url = urls.chapter_url + str(chapter.story_id) + "/" + str(chapter.chapter_id)
     improved_prompt = ""
     try:
         with db_cursor() as cursor:
-            story = repo.get_draft_story_owned(cursor, chapter.story_id, chapter.user)
+            story = repo.get_draft_story_owned(cursor, chapter.story_id, user)
             if not story:
                 # No owned draft: return the URL without generating (matches original).
                 return {"url": chapter_url}
@@ -226,10 +231,11 @@ async def illustrate_chapter(chapter: Chapter) -> dict:
             improved_prompt = replace_actors_in_prompt(actor_library, prompt)
             actor_library_str = convert_actor_library_to_string(actor_library)
             repo.update_story_libraries(
-                cursor, chapter.story_id, chapter.user, character_library, actor_library_str
+                cursor, chapter.story_id, user, character_library, actor_library_str
             )
         # db_cursor committed on clean exit; generate the image afterwards.
-    except mysql.connector.Error:
+    except mysql.connector.Error as err:
+        log_error(f"illustrate_chapter failed: {err}")
         return {}
 
     imgfilename = str(chapter.story_id) + "_" + str(chapter.chapter_id) + ".png"
@@ -245,10 +251,10 @@ async def illustrate_chapter(chapter: Chapter) -> dict:
     return {"url": chapter_url}
 
 
-def regenerate_chapter(chapter: Chapter) -> dict:
+def regenerate_chapter(chapter: Chapter, user: str) -> dict:
     try:
         with db_cursor() as cursor:
-            story = repo.get_draft_story_owned(cursor, chapter.story_id, chapter.user)
+            story = repo.get_draft_story_owned(cursor, chapter.story_id, user)
             if not story:
                 return {"status": "failure"}
             story_data = {
@@ -261,7 +267,8 @@ def regenerate_chapter(chapter: Chapter) -> dict:
             story_data["chapters"] = [
                 {"id": c[0], "title": c[2], "text": c[3], "alignment": c[4]} for c in chapters
             ]
-    except mysql.connector.Error:
+    except mysql.connector.Error as err:
+        log_error(f"regenerate_chapter failed: {err}")
         return {"status": "failure"}
 
     new_story_markdown = regenerate_chapter_for_story(story_data, chapter.chapter_id)
