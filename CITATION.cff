@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the associated publication below."
+title: "ImageTeller - An AI-powered Storyteller"
+version: "1.0.0"
+date-released: 2026-06-07
+doi: 10.1007/978-3-031-81713-7_16
+url: https://github.com/edirleilima/imageteller
+authors:
+  - family-names: de Lima
+    given-names: Edirlei Soares
+preferred-citation:
+  type: conference-paper
+  title: "From Images to Stories: Exploring Player-Driven Narratives in Games"
+  authors:
+    - family-names: de Lima
+      given-names: Edirlei Soares
+    - family-names: Neggers
+      given-names: Margot M. E.
+    - family-names: Casanova
+      given-names: Marco A.
+    - family-names: Furtado
+      given-names: Antonio L.
+  year: 2024
+  conference:
+    name: "14th International Conference on Videogame Sciences and Arts (VIDEOJOGOS 2024)"
+    city: Leiria
+    country: PT
+  doi: 10.1007/978-3-031-81713-7_16
