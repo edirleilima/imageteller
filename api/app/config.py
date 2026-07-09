@@ -51,6 +51,7 @@ class LLMSettings:
     ollama_server: str
     ollama_server_image: str
     vllm_server: str
+    vllm_key: str
     openai_key: str
 
     @classmethod
@@ -68,6 +69,7 @@ class LLMSettings:
             ollama_server=_required("OLLAMA_SERVER"),
             ollama_server_image=_required("OLLAMA_SERVER_IMAGE"),
             vllm_server=_required("VLLM_SERVER"),
+            vllm_key=os.getenv("VLLM_KEY", "NONE"),
             openai_key=_required("OPENAI_KEY"),
         )
 

@@ -58,7 +58,9 @@ def process_image(uploaded_file: str) -> str:
 def generate_image_description(image_url: str, file_path: str, caption: str) -> str:
     """Describe an image via the configured vision provider.
 
-    OpenAI receives the image by URL; Ollama receives a resized base64 image.
+    OpenAI receives the image by URL; vLLM and Ollama receive a resized image.
+    vLLM takes it as a base64 data URI in the OpenAI content format; Ollama
+    takes it as base64 in its own ``images`` field.
     """
     caption_instruction = ""
     if caption != "":
@@ -77,6 +79,26 @@ def generate_image_description(image_url: str, file_path: str, caption: str) -> 
                     {
                         "type": "image_url",
                         "image_url": {"url": image_url, "detail": "high"},
+                    },
+                ],
+            }
+        ]
+        return send_llm_request(
+            messages, llm.image_provider, llm.image_model, llm.image_temperature
+        )
+
+    if llm.image_provider == "vllm":
+        encoded_image = process_image(file_path)
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": full_instructions},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{encoded_image}"
+                        },
                     },
                 ],
             }
