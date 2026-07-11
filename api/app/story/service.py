@@ -1,6 +1,7 @@
 """High-level story operations."""
 from __future__ import annotations
 
+import os
 import random
 import re
 
@@ -238,8 +239,12 @@ async def illustrate_chapter(chapter: Chapter, user: str) -> dict:
         log_error(f"illustrate_chapter failed: {err}")
         return {}
 
-    imgfilename = str(chapter.story_id) + "_" + str(chapter.chapter_id) + ".png"
-    imgfullpath = paths.chapters + imgfilename
+    imgfilename = f"{chapter.story_id}_{chapter.chapter_id}.png"
+    chapters_root = os.path.realpath(paths.chapters)
+    imgfullpath = os.path.realpath(os.path.join(chapters_root, imgfilename))
+    if os.path.commonpath([chapters_root, imgfullpath]) != chapters_root:
+        log_error(f"illustrate_chapter: refusing out-of-tree write path {imgfullpath!r}")
+        return {}
     params = (
         comfyui.workflow_path,
         improved_prompt + " " + _ILLUSTRATION_STYLE,

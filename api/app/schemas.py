@@ -6,6 +6,6 @@ from pydantic import BaseModel
 
 class Chapter(BaseModel):
     """Payload for chapter illustration / regeneration requests."""
-    story_id: str
-    chapter_id: str
-    text: str
+    story_id: int
+    chapter_id: int
+    text: str = ""
