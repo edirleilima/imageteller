@@ -48,13 +48,13 @@ def get_story_for_user(cursor: Cursor, story_id, user_id) -> Row | None:
 
 
 def list_all_stories(cursor: Cursor) -> list[Row]:
-    cursor.execute("SELECT * FROM story")
+    cursor.execute("SELECT * FROM story WHERE TRIM(title) <> ''")
     return cursor.fetchall()
 
 
 def list_user_stories(cursor: Cursor, user_id) -> list[Row]:
     cursor.execute(
-        "SELECT * FROM story WHERE (user_id = %s OR user_id = '') AND deleted = 0",
+        "SELECT * FROM story WHERE (user_id = %s OR user_id = '') AND deleted = 0 AND TRIM(title) <> ''",
         (user_id,),
     )
     return cursor.fetchall()
