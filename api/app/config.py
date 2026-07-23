@@ -181,13 +181,7 @@ class UploadSettings:
 
 @dataclass(frozen=True)
 class RateLimitSettings:
-    """Abuse-control limits. All optional; sensible defaults if unset.
-
-    ``storage_uri`` defaults to in-process memory, which means limits are
-    enforced *per uvicorn worker*. With ``--workers 4`` the effective limit is
-    4x the configured value. Point this at a shared backend (e.g.
-    ``redis://host:6379``) for exact, cross-worker enforcement.
-    """
+    """Abuse-control limits. All optional; sensible defaults if unset."""
     storage_uri: str = field(
         default_factory=lambda: os.getenv("RATE_LIMIT_STORAGE_URI", "memory://")
     )

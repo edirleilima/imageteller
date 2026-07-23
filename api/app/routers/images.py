@@ -15,8 +15,6 @@ from app.story import service
 
 router = APIRouter()
 
-# Returned on every served media file so browsers never MIME-sniff an uploaded
-# file into an executable type.
 _NOSNIFF = {"X-Content-Type-Options": "nosniff"}
 
 

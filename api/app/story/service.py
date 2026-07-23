@@ -98,15 +98,7 @@ def parse_story(markdown_story: str) -> dict:
 
 
 def ensure_story_title(parsed_story: dict, genre: str = "") -> str:
-    """Return a guaranteed non-empty title for a parsed story.
-
-    The generation prompt asks the model to emit the title as a markdown H1,
-    but models occasionally omit it, wrap it, or use a different heading level,
-    in which case ``parse_story`` returns an empty string. Persisting that
-    empty title is what produces title-less rows in the library, so never let
-    it reach the database: fall back to the first chapter heading (usually a
-    sensible stand-in), then to a generic label as a last resort.
-    """
+    """Return a guaranteed non-empty title for a parsed story."""
     title = (parsed_story.get("title") or "").strip()
     if title:
         return title
@@ -123,8 +115,6 @@ def save_generated_story(parsed_story: dict, user_id: str, genre: str, image_des
     image_desc_str = ""
     for i in range(0, len(image_desc)):
         image_desc_str = image_desc_str + str(i) + ". " + image_desc[i] + "\n"
-    # Never persist an empty title: it produces blank, title-less rows in the
-    # library. Resolve a fallback up front so the returned dict matches the DB.
     parsed_story["title"] = ensure_story_title(parsed_story, genre)
     try:
         with db_cursor() as cursor:
@@ -245,7 +235,6 @@ async def illustrate_chapter(chapter: Chapter, user: str) -> dict:
         with db_cursor() as cursor:
             story = repo.get_draft_story_owned(cursor, chapter.story_id, user)
             if not story:
-                # No owned draft: return the URL without generating (matches original).
                 return {"url": chapter_url}
             character_library = story[7] if story[7] else ""
             actor_library_str = story[8] if story[8] else ""
@@ -258,7 +247,6 @@ async def illustrate_chapter(chapter: Chapter, user: str) -> dict:
             repo.update_story_libraries(
                 cursor, chapter.story_id, user, character_library, actor_library_str
             )
-        # db_cursor committed on clean exit; generate the image afterwards.
     except mysql.connector.Error as err:
         log_error(f"illustrate_chapter failed: {err}")
         return {}

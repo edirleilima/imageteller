@@ -23,7 +23,7 @@ async def image_generation_worker() -> None:
         try:
             result = await comfyui_generate_image_flux_async(*params)
             future.set_result(result)
-        except Exception as e:  # noqa: BLE001 — surfaced to the caller via the future
+        except Exception as e:
             future.set_exception(e)
         finally:
             image_generation_queue.task_done()
@@ -79,7 +79,7 @@ async def _get_images_via_ws(ws, prompt: dict, uri: str, headers: dict) -> dict:
             ws = await websockets.connect(uri, additional_headers=headers)
             prompt_id = (await _queue_prompt(prompt))["prompt_id"]
             continue
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             write_to_log(f"An unexpected error occurred: {e}")
             await asyncio.sleep(15)
             ws = await websockets.connect(uri, additional_headers=headers)

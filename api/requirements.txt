@@ -4,7 +4,7 @@ uvicorn
 pydantic
 python-multipart
 
-# Rate limiting (abuse control)
+# Rate limiting
 slowapi
 
 # Configuration

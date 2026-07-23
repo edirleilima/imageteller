@@ -33,12 +33,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Abuse-control rate limiting (see app/ratelimit.py).
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# Identity travels in the X-User-Id header, not cookies, so credentialed CORS
-# is unnecessary. Origins are still restricted to the configured front-end.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[api.domain_url] if api.domain_url else [],

@@ -1,12 +1,4 @@
-"""Shared rate limiter (abuse control for the public API).
-
-Keyed on the real client IP. Because the API runs behind an Apache reverse
-proxy, ``request.client.host`` is the proxy's address, so we read the client
-from ``X-Forwarded-For`` when present. For this to be trustworthy the proxy
-must set/overwrite that header (e.g. Apache ``mod_remoteip`` /
-``RemoteIPHeader X-Forwarded-For``); otherwise a client could spoof it to
-dodge limits.
-"""
+"""Shared rate limiter (abuse control for the public API)."""
 from __future__ import annotations
 
 from slowapi import Limiter
