@@ -59,20 +59,28 @@ async def image_to_story(
         captions.extend([""] * (len(files) - len(captions)))
 
     image_inputs = []
-    for index, file in enumerate(files):
-        contents = await file.read()
-        if len(contents) > uploads.max_file_size:
-            raise HTTPException(status_code=413, detail="File too large")
-        validate_file_type(file.filename)
-        validate_image_content(contents)
-        unique_filename = str(uuid.uuid4()) + sanitize_filename(os.path.splitext(file.filename)[-1])
-        file_path = os.path.join(paths.images, unique_filename)
-        file_url = urls.image_url + unique_filename
-        with open(file_path, "wb") as f:
-            f.write(contents)
-        image_inputs.append({"url": file_url, "path": file_path, "caption": captions[index]})
+    try:
+        for index, file in enumerate(files):
+            contents = await file.read()
+            if len(contents) > uploads.max_file_size:
+                raise HTTPException(status_code=413, detail="File too large")
+            validate_file_type(file.filename)
+            validate_image_content(contents)
+            unique_filename = str(uuid.uuid4()) + sanitize_filename(os.path.splitext(file.filename)[-1])
+            file_path = os.path.join(paths.images, unique_filename)
+            file_url = urls.image_url + unique_filename
+            with open(file_path, "wb") as f:
+                f.write(contents)
+            image_inputs.append({"url": file_url, "path": file_path, "caption": captions[index]})
 
-    return service.compose_story_from_images(image_inputs, genre, user)
+        return service.compose_story_from_images(image_inputs, genre, user)
+    finally:
+        # Uploads are only needed to generate the image descriptions.
+        for item in image_inputs:
+            try:
+                os.remove(item["path"])
+            except OSError:
+                pass
 
 
 @router.post("/get-stories/")
