@@ -26,7 +26,6 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    root_path=api.root_path,
     docs_url=None,
     redoc_url=None,
     openapi_url=None,
