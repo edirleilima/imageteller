@@ -38,6 +38,6 @@ COPY ./app /code/app
 EXPOSE 8001
 
 HEALTHCHECK --interval=300s --timeout=15s --start-period=20s --retries=3 \
-    CMD curl --fail --silent http://localhost:8001/imageteller-api/health || exit 1
+    CMD curl --fail --silent http://localhost:8001/health || exit 1
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "4", "--root-path", "/imageteller-api"]
